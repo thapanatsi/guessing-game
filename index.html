@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Number Guessing Game</title>
+<style>
+  :root {
+    --bg: #070b14;
+    --card: #0f172a;
+    --panel: #1e293b;
+    --entry: #334155;
+    --accent: #14b8a6;
+    --accent-dark: #0d9488;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 14px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--card);
+    border-radius: 18px;
+    padding: 28px 26px 24px;
+    text-align: center;
+  }
+
+  h1 {
+    margin: 0 0 8px;
+    font-size: 1.55rem;
+    font-weight: 700;
+  }
+
+  .status {
+    margin: 0 0 20px;
+    color: var(--muted);
+    font-size: 0.98rem;
+  }
+
+  .digits {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .digits input {
+    width: 66px;
+    height: 76px;
+    text-align: center;
+    font-family: Consolas, "SFMono-Regular", ui-monospace, Menlo, monospace;
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--text);
+    background: var(--entry);
+    border: 2px solid var(--panel);
+    border-radius: 12px;
+    outline: none;
+    caret-color: var(--accent);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .digits input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.25);
+  }
+
+  .digits input.shake { animation: shake 0.3s ease; }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  .digits.win input {
+    border-color: var(--success);
+    background: rgba(34, 197, 94, 0.15);
+  }
+
+  .result {
+    min-height: 24px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+
+  .result.warn { color: var(--warning); }
+  .result.info { color: var(--text); }
+  .result.win { color: var(--success); }
+
+  .log-wrap {
+    background: var(--panel);
+    border-radius: 10px;
+    height: 170px;
+    overflow-y: auto;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    text-align: left;
+    font-family: Consolas, "SFMono-Regular", ui-monospace, Menlo, monospace;
+    font-size: 0.85rem;
+    line-height: 1.8;
+  }
+
+  .log-wrap .empty {
+    color: var(--muted);
+    font-family: "Segoe UI", sans-serif;
+    font-size: 0.9rem;
+  }
+
+  .log-line .num { color: var(--muted); }
+  .log-line .exact { color: var(--success); }
+  .log-line .partial { color: var(--warning); }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .keypad button {
+    padding: 16px 0;
+    font-family: inherit;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    background: var(--entry);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: filter 0.12s ease, transform 0.06s ease;
+  }
+
+  .keypad button:hover { filter: brightness(1.12); }
+  .keypad button:active { transform: scale(0.96); }
+
+  .keypad button.danger { background: var(--danger); }
+  .keypad button.accent { background: var(--accent); color: #052e2a; }
+  .keypad button.accent:hover { background: var(--accent-dark); filter: none; }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .actions button, .actions-full button {
+    flex: 1;
+    padding: 12px 8px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text);
+    background: var(--panel);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: filter 0.12s ease;
+  }
+
+  .actions button:hover, .actions-full button:hover { filter: brightness(1.2); }
+
+  .actions-full button { width: 100%; }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 16, 0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 10;
+  }
+
+  .overlay.show { display: flex; }
+
+  .modal {
+    width: 100%;
+    max-width: 340px;
+    background: var(--card);
+    border-radius: 16px;
+    padding: 26px 24px;
+    text-align: center;
+  }
+
+  .modal h2 {
+    margin: 0 0 12px;
+    font-size: 1.3rem;
+  }
+
+  .modal p {
+    margin: 0 0 18px;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  .modal input[type="text"] {
+    width: 100%;
+    padding: 13px 14px;
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--text);
+    background: var(--entry);
+    border: 2px solid var(--entry);
+    border-radius: 10px;
+    outline: none;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .modal input[type="text"]::placeholder { color: var(--muted); }
+
+  .modal input[type="text"]:focus { border-color: var(--accent); }
+
+  .modal .primary {
+    display: block;
+    width: 100%;
+    padding: 13px 0;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #052e2a;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-bottom: 14px;
+  }
+
+  .modal .primary:hover { background: var(--accent-dark); }
+
+  .modal .skip {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.88rem;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .modal .skip:hover { color: var(--text); }
+
+  table.board {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    margin-bottom: 6px;
+    text-align: left;
+  }
+
+  table.board th {
+    color: var(--muted);
+    font-weight: 600;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--entry);
+  }
+
+  table.board td {
+    padding: 8px;
+    border-bottom: 1px solid var(--entry);
+    font-family: Consolas, monospace;
+  }
+
+  table.board tr:last-child td { border-bottom: none; }
+
+  .board-empty {
+    color: var(--muted);
+    font-size: 0.9rem;
+    padding: 18px 0;
+  }
+
+  @media (max-width: 380px) {
+    .digits input { width: 56px; height: 68px; font-size: 1.4rem; }
+    .card { padding: 22px 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>🔢 Number Guessing Game</h1>
+  <p class="status">Player: <span id="playerName">Player</span>&nbsp;&nbsp;|&nbsp;&nbsp;Attempts: <span id="attemptCount">0</span></p>
+
+  <div class="digits" id="digits">
+    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="0" aria-label="Digit 1">
+    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="1" aria-label="Digit 2">
+    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="2" aria-label="Digit 3">
+    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="3" aria-label="Digit 4">
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <div class="log-wrap" id="logWrap">
+    <div class="empty" id="logEmpty">Your guesses will show up here...</div>
+  </div>
+
+  <div class="keypad" id="keypad">
+    <button data-digit="1">1</button>
+    <button data-digit="2">2</button>
+    <button data-digit="3">3</button>
+    <button data-digit="4">4</button>
+    <button data-digit="5">5</button>
+    <button data-digit="6">6</button>
+    <button data-digit="7">7</button>
+    <button data-digit="8">8</button>
+    <button data-digit="9">9</button>
+    <button class="danger" id="keyBack">⌫</button>
+    <button data-digit="0">0</button>
+    <button class="accent" id="keyEnter">✔ Enter</button>
+  </div>
+
+  <div class="actions">
+    <button id="btnNew">🔄 New Game</button>
+    <button id="btnRename">✏️ Change Name</button>
+  </div>
+  <div class="actions-full">
+    <button id="btnBoard">🏆 Leaderboard</button>
+  </div>
+</div>
+
+<!-- name modal -->
+<div class="overlay" id="nameOverlay">
+  <div class="modal">
+    <h2>👋 Welcome!</h2>
+    <p>Please enter your name:</p>
+    <input type="text" id="nameInput" placeholder="Player" maxlength="24" autocomplete="off">
+    <button class="primary" id="nameSave">Start Playing</button>
+    <button class="skip" id="nameSkip">Skip, just call me "Player"</button>
+  </div>
+</div>
+
+<!-- leaderboard modal -->
+<div class="overlay" id="boardOverlay">
+  <div class="modal" style="max-width: 380px;">
+    <h2>🏆 Leaderboard — Top Players</h2>
+    <div id="boardContent"></div>
+    <button class="primary" id="boardClose" style="margin-top: 6px;">Close</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const DIGIT_COUNT = 4;
+  const MAX_ROWS = 10;
+  const NAME_KEY = "numguess.name";
+  const BOARD_KEY = "numguess.leaderboard";
+
+  const els = {
+    digits: Array.from(document.querySelectorAll("#digits input")),
+    digitsWrap: document.getElementById("digits"),
+    result: document.getElementById("result"),
+    logWrap: document.getElementById("logWrap"),
+    logEmpty: document.getElementById("logEmpty"),
+    playerName: document.getElementById("playerName"),
+    attemptCount: document.getElementById("attemptCount"),
+    keypad: document.getElementById("keypad"),
+    keyBack: document.getElementById("keyBack"),
+    keyEnter: document.getElementById("keyEnter"),
+    btnNew: document.getElementById("btnNew"),
+    btnRename: document.getElementById("btnRename"),
+    btnBoard: document.getElementById("btnBoard"),
+    nameOverlay: document.getElementById("nameOverlay"),
+    nameInput: document.getElementById("nameInput"),
+    nameSave: document.getElementById("nameSave"),
+    nameSkip: document.getElementById("nameSkip"),
+    boardOverlay: document.getElementById("boardOverlay"),
+    boardContent: document.getElementById("boardContent"),
+    boardClose: document.getElementById("boardClose"),
+  };
+
+  let answer = [];
+  let attempts = 0;
+  let gameOver = false;
+  let playerName = "Player";
+
+  // ---------- storage helpers (safe against missing/corrupt data) ----------
+  function loadName() {
+    try {
+      const n = localStorage.getItem(NAME_KEY);
+      return n && n.trim() ? n.trim() : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveName(n) {
+    try { localStorage.setItem(NAME_KEY, n); } catch (e) { /* ignore */ }
+  }
+
+  function loadBoard() {
+    try {
+      const raw = localStorage.getItem(BOARD_KEY);
+      if (!raw) return [];
+      const data = JSON.parse(raw);
+      return Array.isArray(data) ? data : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveBoard(data) {
+    try { localStorage.setItem(BOARD_KEY, JSON.stringify(data)); } catch (e) { /* ignore */ }
+  }
+
+  // ---------- game logic ----------
+  function randomAnswer() {
+    const a = [];
+    for (let i = 0; i < DIGIT_COUNT; i++) a.push(String(Math.floor(Math.random() * 10)));
+    return a;
+  }
+
+  function evaluate(guess, ans) {
+    let exact = 0;
+    const freqG = {}, freqA = {};
+    for (let i = 0; i < DIGIT_COUNT; i++) {
+      if (guess[i] === ans[i]) exact++;
+      freqG[guess[i]] = (freqG[guess[i]] || 0) + 1;
+      freqA[ans[i]] = (freqA[ans[i]] || 0) + 1;
+    }
+    let common = 0;
+    Object.keys(freqG).forEach((d) => {
+      common += Math.min(freqG[d], freqA[d] || 0);
+    });
+    return { exact, partial: common - exact };
+  }
+
+  function newRound() {
+    answer = randomAnswer();
+    attempts = 0;
+    gameOver = false;
+    els.digitsWrap.classList.remove("win");
+    clearDigits();
+    clearLog();
+    setResult("", "");
+    updateStatus();
+    focusIndex(0);
+  }
+
+  function clearDigits() {
+    els.digits.forEach((inp) => { inp.value = ""; inp.disabled = false; });
+  }
+
+  function clearLog() {
+    els.logWrap.innerHTML = "";
+    els.logWrap.appendChild(els.logEmpty);
+    els.logEmpty.style.display = "block";
+  }
+
+  function updateStatus() {
+    els.playerName.textContent = playerName;
+    els.attemptCount.textContent = String(attempts);
+  }
+
+  function setResult(text, cls) {
+    els.result.textContent = text;
+    els.result.className = "result" + (cls ? " " + cls : "");
+  }
+
+  function focusIndex(i) {
+    if (i >= 0 && i < DIGIT_COUNT) {
+      els.digits[i].focus();
+      els.digits[i].select();
+    }
+  }
+
+  function firstEmptyIndex() {
+    for (let i = 0; i < DIGIT_COUNT; i++) if (els.digits[i].value === "") return i;
+    return -1;
+  }
+
+  function shakeInvalid() {
+    els.digits.forEach((inp) => {
+      if (inp.value === "") {
+        inp.classList.add("shake");
+        setTimeout(() => inp.classList.remove("shake"), 300);
+      }
+    });
+  }
+
+  function checkGuess() {
+    if (gameOver) return;
+    const guess = els.digits.map((inp) => inp.value);
+    if (guess.includes("")) {
+      setResult("⚠️ Please fill all 4 digits!", "warn");
+      shakeInvalid();
+      return;
+    }
+    attempts++;
+    const { exact, partial } = evaluate(guess, answer);
+    logGuess(guess, exact, partial);
+    updateStatus();
+
+    if (exact === DIGIT_COUNT) {
+      gameOver = true;
+      onWin();
+    } else {
+      setResult("❌ " + exact + " exact match, " + partial + " right digit (wrong spot)", "info");
+      clearDigits();
+      focusIndex(0);
+    }
+  }
+
+  function logGuess(guess, exact, partial) {
+    if (els.logEmpty.style.display !== "none") els.logEmpty.style.display = "none";
+    const row = document.createElement("div");
+    row.className = "log-line";
+    row.innerHTML =
+      '<span class="num">#' + attempts + "</span> " +
+      guess.join("") + "  &rarr;  " +
+      '<span class="exact">' + exact + " exact</span>, " +
+      '<span class="partial">' + partial + " partial</span>";
+    els.logWrap.appendChild(row);
+    els.logWrap.scrollTop = els.logWrap.scrollHeight;
+  }
+
+  function onWin() {
+    els.digitsWrap.classList.add("win");
+    els.digits.forEach((inp) => { inp.disabled = true; });
+    setResult("🎉 Correct! Solved in " + attempts + " attempts. Answer: " + answer.join(""), "win");
+    saveScore();
+    setTimeout(openBoard, 400);
+  }
+
+  function saveScore() {
+    const data = loadBoard();
+    data.push({
+      name: playerName,
+      attempts: attempts,
+      date: new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }),
+    });
+    data.sort((a, b) => (a.attempts || 999) - (b.attempts || 999));
+    saveBoard(data);
+  }
+
+  // ---------- digit box input handling ----------
+  els.digits.forEach((inp, idx) => {
+    inp.addEventListener("input", () => {
+      const clean = inp.value.replace(/[^0-9]/g, "").slice(-1);
+      inp.value = clean;
+      if (clean !== "" && idx + 1 < DIGIT_COUNT) focusIndex(idx + 1);
+    });
+
+    inp.addEventListener("keydown", (e) => {
+      if (gameOver) { e.preventDefault(); return; }
+      if (e.key === "Enter") { e.preventDefault(); checkGuess(); return; }
+      if (e.key === "Backspace" && inp.value === "" && idx > 0) {
+        e.preventDefault();
+        els.digits[idx - 1].value = "";
+        focusIndex(idx - 1);
+        return;
+      }
+      if (e.key === "ArrowLeft") { e.preventDefault(); focusIndex(idx - 1); return; }
+      if (e.key === "ArrowRight") { e.preventDefault(); focusIndex(idx + 1); return; }
+    });
+
+    inp.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData("text");
+      const digits = text.replace(/[^0-9]/g, "").split("");
+      let cursor = idx;
+      digits.forEach((d) => {
+        if (cursor < DIGIT_COUNT) { els.digits[cursor].value = d; cursor++; }
+      });
+      focusIndex(Math.min(cursor, DIGIT_COUNT - 1));
+    });
+
+    inp.addEventListener("focus", () => inp.select());
+  });
+
+  // ---------- on-screen keypad ----------
+  els.keypad.querySelectorAll("button[data-digit]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (gameOver) return;
+      const idx = firstEmptyIndex();
+      if (idx === -1) return;
+      els.digits[idx].value = btn.dataset.digit;
+      if (idx + 1 < DIGIT_COUNT) focusIndex(idx + 1); else els.digits[idx].focus();
+    });
+  });
+
+  els.keyBack.addEventListener("click", () => {
+    if (gameOver) return;
+    for (let i = DIGIT_COUNT - 1; i >= 0; i--) {
+      if (els.digits[i].value !== "") { els.digits[i].value = ""; focusIndex(i); return; }
+    }
+    focusIndex(0);
+  });
+
+  els.keyEnter.addEventListener("click", checkGuess);
+
+  // ---------- name modal ----------
+  function openNameModal() {
+    els.nameOverlay.classList.add("show");
+    els.nameInput.value = "";
+    setTimeout(() => els.nameInput.focus(), 50);
+  }
+
+  function closeNameModal() {
+    els.nameOverlay.classList.remove("show");
+    focusIndex(0);
+  }
+
+  function commitName(raw) {
+    const trimmed = (raw || "").trim();
+    playerName = trimmed !== "" ? trimmed.slice(0, 24) : "Player";
+    saveName(playerName);
+    updateStatus();
+    closeNameModal();
+  }
+
+  els.nameSave.addEventListener("click", () => commitName(els.nameInput.value));
+  els.nameSkip.addEventListener("click", () => commitName(""));
+  els.nameInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); commitName(els.nameInput.value); }
+  });
+
+  els.btnRename.addEventListener("click", openNameModal);
+
+  // ---------- leaderboard modal ----------
+  function openBoard() {
+    renderBoard();
+    els.boardOverlay.classList.add("show");
+  }
+
+  function closeBoard() {
+    els.boardOverlay.classList.remove("show");
+  }
+
+  function renderBoard() {
+    const data = loadBoard().slice().sort((a, b) => (a.attempts || 999) - (b.attempts || 999));
+    if (data.length === 0) {
+      els.boardContent.innerHTML = '<div class="board-empty">No scores yet.</div>';
+      return;
+    }
+    let html = '<table class="board"><thead><tr><th>#</th><th>Name</th><th>Attempts</th><th>Date</th></tr></thead><tbody>';
+    data.slice(0, MAX_ROWS).forEach((row, i) => {
+      html += "<tr><td>" + (i + 1) + "</td><td>" +
+        escapeHtml(row.name || "?") + "</td><td>" + (row.attempts != null ? row.attempts : "?") +
+        "</td><td>" + escapeHtml(row.date || "") + "</td></tr>";
+    });
+    html += "</tbody></table>";
+    els.boardContent.innerHTML = html;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+
+  els.btnBoard.addEventListener("click", openBoard);
+  els.boardClose.addEventListener("click", closeBoard);
+  els.boardOverlay.addEventListener("click", (e) => { if (e.target === els.boardOverlay) closeBoard(); });
+
+  els.btnNew.addEventListener("click", newRound);
+
+  // ---------- boot ----------
+  const savedName = loadName();
+  if (savedName) {
+    playerName = savedName;
+    updateStatus();
+  } else {
+    setTimeout(openNameModal, 200);
+  }
+
+  newRound();
+})();
+</script>
+</body>
+</html>
