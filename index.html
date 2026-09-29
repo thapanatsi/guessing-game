@@ -307,10 +307,10 @@
   <p class="status">Player: <span id="playerName">Player</span>&nbsp;&nbsp;|&nbsp;&nbsp;Attempts: <span id="attemptCount">0</span></p>
 
   <div class="digits" id="digits">
-    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="0" aria-label="Digit 1">
-    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="1" aria-label="Digit 2">
-    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="2" aria-label="Digit 3">
-    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" data-idx="3" aria-label="Digit 4">
+    <input type="text" inputmode="none" pattern="[0-9]*" maxlength="1" data-idx="0" aria-label="Digit 1">
+    <input type="text" inputmode="none" pattern="[0-9]*" maxlength="1" data-idx="1" aria-label="Digit 2">
+    <input type="text" inputmode="none" pattern="[0-9]*" maxlength="1" data-idx="2" aria-label="Digit 3">
+    <input type="text" inputmode="none" pattern="[0-9]*" maxlength="1" data-idx="3" aria-label="Digit 4">
   </div>
 
   <div class="result" id="result"></div>
@@ -397,6 +397,7 @@
   let attempts = 0;
   let gameOver = false;
   let playerName = "Player";
+  let leaderboard = [];
 
   // ---------- storage helpers (safe against missing/corrupt data) ----------
   function loadName() {
@@ -412,7 +413,7 @@
     try { localStorage.setItem(NAME_KEY, n); } catch (e) { /* ignore */ }
   }
 
-  function loadBoard() {
+  function loadBoardFromStorage() {
     try {
       const raw = localStorage.getItem(BOARD_KEY);
       if (!raw) return [];
@@ -423,8 +424,11 @@
     }
   }
 
-  function saveBoard(data) {
-    try { localStorage.setItem(BOARD_KEY, JSON.stringify(data)); } catch (e) { /* ignore */ }
+  function persistBoard() {
+    // Best-effort only: some previews/browsers block localStorage entirely.
+    // The in-memory `leaderboard` array is the real source of truth, so
+    // scores still show up this session even when this silently fails.
+    try { localStorage.setItem(BOARD_KEY, JSON.stringify(leaderboard)); } catch (e) { /* ignore */ }
   }
 
   // ---------- game logic ----------
@@ -547,14 +551,13 @@
   }
 
   function saveScore() {
-    const data = loadBoard();
-    data.push({
+    leaderboard.push({
       name: playerName,
       attempts: attempts,
       date: new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }),
     });
-    data.sort((a, b) => (a.attempts || 999) - (b.attempts || 999));
-    saveBoard(data);
+    leaderboard.sort((a, b) => (a.attempts || 999) - (b.attempts || 999));
+    persistBoard();
   }
 
   // ---------- digit box input handling ----------
@@ -652,7 +655,7 @@
   }
 
   function renderBoard() {
-    const data = loadBoard().slice().sort((a, b) => (a.attempts || 999) - (b.attempts || 999));
+    const data = leaderboard.slice().sort((a, b) => (a.attempts || 999) - (b.attempts || 999));
     if (data.length === 0) {
       els.boardContent.innerHTML = '<div class="board-empty">No scores yet.</div>';
       return;
@@ -680,6 +683,7 @@
   els.btnNew.addEventListener("click", newRound);
 
   // ---------- boot ----------
+  leaderboard = loadBoardFromStorage();
   const savedName = loadName();
   if (savedName) {
     playerName = savedName;
